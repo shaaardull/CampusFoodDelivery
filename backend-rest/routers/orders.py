@@ -128,22 +128,16 @@ async def accept_order(order_id: str, user: dict = Depends(get_current_user)):
         )
 
     # Update the order
-    try:
-        update_result = db.table("orders").update(
-            {"pilot_uid": user["uid"], "status": "accepted", "accepted_at": _now()}
-        ).eq("id", order_id).execute()
-        print(f"[ACCEPT] update result data={update_result.data}")
-    except Exception as e:
-        print(f"[ACCEPT] update EXCEPTION: {e}")
-        raise HTTPException(status_code=500, detail=f"Update failed: {e}")
+    db.table("orders").update(
+        {"pilot_uid": user["uid"], "status": "accepted", "accepted_at": _now()}
+    ).eq("id", order_id).execute()
 
     # Re-fetch to confirm and return updated order
     updated = db.table("orders").select("*").eq("id", order_id).execute()
-    print(f"[ACCEPT] re-fetch status={updated.data[0]['status'] if updated.data else 'NO DATA'}")
     if not updated.data or updated.data[0]["status"] != "accepted":
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to accept order. Update returned: {update_result.data}. Re-fetch status: {updated.data[0]['status'] if updated.data else 'none'}"
+            detail="Failed to accept order. If this persists, ensure RLS is disabled on the 'orders' table (see supabase/schema.sql).",
         )
 
     return {"order": updated.data[0]}

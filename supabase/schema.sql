@@ -157,38 +157,15 @@ CREATE INDEX idx_audit_created ON audit_log(created_at DESC);
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ratings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
-
--- Users can read their own data; pilots can be looked up publicly
-CREATE POLICY "Users can read own data" ON users
-    FOR SELECT USING (true);
-
-CREATE POLICY "Users can update own data" ON users
-    FOR UPDATE USING (auth.uid() = uid);
-
--- Orders: requesters and pilots can see their orders; open orders visible to all
-CREATE POLICY "Open orders visible to all" ON orders
-    FOR SELECT USING (status = 'open' OR requester_uid = auth.uid() OR pilot_uid = auth.uid());
-
-CREATE POLICY "Authenticated users can insert orders" ON orders
-    FOR INSERT WITH CHECK (auth.uid() = requester_uid);
-
-CREATE POLICY "Involved users can update orders" ON orders
-    FOR UPDATE USING (requester_uid = auth.uid() OR pilot_uid = auth.uid());
-
--- Ratings: public read, authenticated write
-CREATE POLICY "Ratings are public" ON ratings
-    FOR SELECT USING (true);
-
-CREATE POLICY "Authenticated users can rate" ON ratings
-    FOR INSERT WITH CHECK (auth.uid() = rater_uid);
-
--- Push subscriptions: users manage their own
-CREATE POLICY "Users manage own push subs" ON push_subscriptions
-    FOR ALL USING (auth.uid() = user_uid);
+-- NOTE: All table access is mediated by the FastAPI backend using the Supabase
+-- service role key. Authorization (who can read/update which order, etc.) is
+-- enforced in the API layer (see backend-rest/routers/*). We therefore disable
+-- RLS on tables the backend mutates, because PostgREST/supabase-py policies
+-- based on auth.uid() don't apply in server-to-server calls.
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE ratings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions DISABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- SEED DATA: Drop Locations

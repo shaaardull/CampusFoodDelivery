@@ -14,8 +14,16 @@ Complete step-by-step guide from zero to running.
 
 1. Create a project at [supabase.com](https://supabase.com)
 2. Go to **SQL Editor** and run these files in order:
-   - `supabase/schema.sql` — creates all tables, indexes, RLS policies, seed data
+   - `supabase/schema.sql` — creates all tables, indexes, seed data (RLS disabled; authorization is enforced in the FastAPI layer)
    - `supabase/functions.sql` — creates stored procedures and triggers
+
+   > **If you ran an older version of `schema.sql` with RLS enabled**, updates will silently fail (accept/advance/complete/cancel will return 500). Fix by running in the SQL Editor:
+   > ```sql
+   > ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+   > ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+   > ALTER TABLE ratings DISABLE ROW LEVEL SECURITY;
+   > ALTER TABLE push_subscriptions DISABLE ROW LEVEL SECURITY;
+   > ```
 3. From **Settings > API**, copy:
    - `Project URL` → this is your `SUPABASE_URL`
    - `service_role` key → this is your `SUPABASE_SERVICE_KEY`
