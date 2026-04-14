@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 # Set env vars before importing app
 os.environ.update({
+    "DEV_MODE": "false",  # Tests run with auth enforced
     "SUPABASE_URL": "https://test.supabase.co",
     "SUPABASE_SERVICE_KEY": "test-key",
     "JWT_SECRET": "test-jwt-secret-32-chars-long-xx",
@@ -207,9 +208,9 @@ class TestOrders:
     def test_accept_order_race_condition(self, mock_db):
         mock_client = MagicMock()
         mock_db.return_value = mock_client
-        # Simulate already-accepted (no rows returned)
-        mock_client.table.return_value.update.return_value.eq.return_value.eq.return_value.is_.return_value.execute.return_value = MagicMock(
-            data=[]
+        # Simulate already-accepted order (pilot_uid is set)
+        mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = MagicMock(
+            data=[{"id": "order-1", "status": "open", "pilot_uid": "someone-else"}]
         )
 
         r = client.post("/orders/order-1/accept", headers=_auth_header())

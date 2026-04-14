@@ -1,8 +1,13 @@
 import random
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 from core.database import get_supabase
 from core.security import get_current_user
@@ -109,18 +114,29 @@ async def get_order(order_id: str, user: dict = Depends(get_current_user)):
 async def accept_order(order_id: str, user: dict = Depends(get_current_user)):
     db = get_supabase()
 
-    # Race-condition safe: only update if still open
+    # Check order is open and unassigned
+    check = db.table("orders").select("*").eq("id", order_id).execute()
+    if not check.data:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order = check.data[0]
+    print(f"[ACCEPT DEBUG] order_id={order_id} status={order['status']!r} pilot_uid={order['pilot_uid']!r} type={type(order['pilot_uid'])}")
+
+    if order["status"] != "open" or order.get("pilot_uid") not in (None, "", "null"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot accept: status={order['status']}, pilot_uid={order['pilot_uid']}"
+        )
+
     result = (
         db.table("orders")
-        .update({"pilot_uid": user["uid"], "status": "accepted", "accepted_at": "now()"})
+        .update({"pilot_uid": user["uid"], "status": "accepted", "accepted_at": _now()})
         .eq("id", order_id)
-        .eq("status", "open")
-        .is_("pilot_uid", "null")
         .execute()
     )
 
     if not result.data:
-        raise HTTPException(status_code=409, detail="Order already accepted or not found")
+        raise HTTPException(status_code=409, detail="Update failed")
 
     return {"order": result.data[0]}
 
@@ -148,7 +164,7 @@ async def advance_status(order_id: str, user: dict = Depends(get_current_user)):
 
     update_data = {"status": next_status}
     if next_status == "purchased":
-        update_data["purchased_at"] = "now()"
+        update_data["purchased_at"] = _now()
 
     result = db.table("orders").update(update_data).eq("id", order_id).execute()
     return {"order": result.data[0]}
@@ -171,7 +187,7 @@ async def complete_order(order_id: str, otp: str, user: dict = Depends(get_curre
 
     result = (
         db.table("orders")
-        .update({"status": "completed", "completed_at": "now()"})
+        .update({"status": "completed", "completed_at": _now()})
         .eq("id", order_id)
         .execute()
     )
@@ -201,7 +217,7 @@ async def cancel_order(order_id: str, reason: Optional[str] = None, user: dict =
 
     result = (
         db.table("orders")
-        .update({"status": "cancelled", "cancelled_at": "now()", "cancellation_reason": reason})
+        .update({"status": "cancelled", "cancelled_at": _now(), "cancellation_reason": reason})
         .eq("id", order_id)
         .execute()
     )

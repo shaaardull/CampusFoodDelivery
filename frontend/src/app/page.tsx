@@ -207,7 +207,7 @@ export default function HomePage() {
       {/* Cart Sheet */}
       {showCart && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
-          <div className="bg-white w-full max-w-lg rounded-t-2xl p-5 max-h-[85vh] overflow-y-auto">
+          <div className="bg-white w-full max-w-lg rounded-t-2xl p-5 pb-24 max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Your Cart</h2>
               <button
