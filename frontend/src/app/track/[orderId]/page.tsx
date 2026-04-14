@@ -231,9 +231,12 @@ export default function TrackOrderPage() {
         )}
       </div>
 
-      {/* OTP (visible only to requester, after acceptance) */}
-      {isRequester &&
-        order.handover_otp &&
+      {/* Handover OTP.
+          The backend strips `handover_otp` from the response when the current
+          user is the pilot (see backend-rest/routers/orders.py get_order), so
+          the mere presence of `order.handover_otp` means the viewer is allowed
+          to see it. No frontend-side identity check needed. */}
+      {order.handover_otp &&
         ["accepted", "purchased", "in_transit", "arrived"].includes(order.status) && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4 text-center">
             <p className="text-sm text-yellow-700 mb-1">
