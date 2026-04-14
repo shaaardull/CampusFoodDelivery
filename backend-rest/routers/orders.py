@@ -103,8 +103,12 @@ async def get_order(order_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Order not found")
 
     order = result.data[0]
-    # Hide OTP from pilot
-    if order.get("pilot_uid") == user["uid"]:
+    # Hide OTP from the pilot — unless they are also the requester
+    # (e.g. in DEV_MODE where the single dev user plays both roles).
+    if (
+        order.get("pilot_uid") == user["uid"]
+        and order.get("requester_uid") != user["uid"]
+    ):
         order.pop("handover_otp", None)
 
     return {"order": order}
