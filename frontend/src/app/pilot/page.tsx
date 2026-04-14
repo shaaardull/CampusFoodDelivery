@@ -49,7 +49,13 @@ export default function PilotPage() {
       ["accepted", "purchased", "in_transit", "arrived"].includes(activeOrder.status)
   );
 
-  const orders = data?.orders || [];
+  const allOrders = data?.orders || [];
+  const isDevUser = user?.email === "dev@campusconnect.dev";
+  // Hide own orders in prod so a pilot doesn't see their own feed entries.
+  // In DEV_MODE there's only one user, so keep everything.
+  const orders = isDevUser
+    ? allOrders
+    : allOrders.filter((o) => o.requester_uid !== user?.uid);
 
   const handleAccept = async (orderId: string) => {
     setLoading(orderId);
@@ -224,9 +230,7 @@ export default function PilotPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {orders
-                .filter((o) => o.requester_uid !== user?.uid)
-                .map((order) => (
+              {orders.map((order) => (
                   <div
                     key={order.id}
                     className="bg-white rounded-xl border border-gray-100 p-4"
