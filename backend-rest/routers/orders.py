@@ -120,19 +120,23 @@ async def accept_order(order_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Order not found")
 
     order = check.data[0]
-    if order["status"] != "open" or order["pilot_uid"] is not None:
-        raise HTTPException(status_code=409, detail="Order already accepted")
+    print(f"[ACCEPT DEBUG] order_id={order_id} status={order['status']!r} pilot_uid={order['pilot_uid']!r} type={type(order['pilot_uid'])}")
+
+    if order["status"] != "open" or order.get("pilot_uid") not in (None, "", "null"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot accept: status={order['status']}, pilot_uid={order['pilot_uid']}"
+        )
 
     result = (
         db.table("orders")
         .update({"pilot_uid": user["uid"], "status": "accepted", "accepted_at": _now()})
         .eq("id", order_id)
-        .eq("status", "open")
         .execute()
     )
 
     if not result.data:
-        raise HTTPException(status_code=409, detail="Order already accepted")
+        raise HTTPException(status_code=409, detail="Update failed")
 
     return {"order": result.data[0]}
 
