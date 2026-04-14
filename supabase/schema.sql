@@ -168,15 +168,17 @@ ALTER TABLE ratings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions DISABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- SEED DATA: Drop Locations
+-- SEED DATA: Drop Locations (NIT Goa campus coordinates)
 -- ============================================================
 INSERT INTO drop_locations (name, description, lat, lng) VALUES
-    ('Talpona Lift', 'Boys Hostel - Talpona Block near lift', 15.1735, 74.0445),
-    ('Terekhol Lift', 'Girls Hostel - Terekhol Block near lift', 15.1738, 74.0448),
-    ('CSE Department', 'Computer Science Department entrance', 15.1740, 74.0435),
-    ('ECE Department', 'Electronics Department entrance', 15.1742, 74.0437),
-    ('Mechanical Department', 'Mechanical Department entrance', 15.1744, 74.0439),
-    ('Library', 'Central Library main entrance', 15.1741, 74.0441);
+    ('Talpona Hostel',     'Boys Hostel - Talpona Block near lift',           15.1710367, 74.0147882),
+    ('Terekhol Hostel',    'Girls Hostel - Terekhol Block near lift',         15.1697763, 74.0121135),
+    ('Mechanical Dept',    'Mechanical Engineering Department entrance',       15.1697079, 74.0127932),
+    ('Civil Dept',         'Civil Engineering Department entrance',            15.1695920, 74.0134207),
+    ('ECE Dept',           'Electronics & Communication Department entrance',  15.1686770, 74.0127808),
+    ('CSE Dept',           'Computer Science Department entrance',             15.1686770, 74.0127808),
+    ('Library Block',      'Central Library main entrance',                    15.1693565, 74.0122595),
+    ('Gyan Mandir',        'Gyan Mandir academic block',                       15.1690189, 74.0117258);
 
 -- ============================================================
 -- SEED DATA: Menu Items (Upahar Ghar)

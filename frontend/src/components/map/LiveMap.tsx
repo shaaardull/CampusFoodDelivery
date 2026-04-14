@@ -5,9 +5,11 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 // NIT Goa campus coordinates
-const CAMPUS_CENTER: [number, number] = [15.1735, 74.0445];
-const CANTEEN_POS: [number, number] = [15.1740, 74.0435];
-const HOSTEL_POS: [number, number] = [15.1735, 74.0445];
+const CAMPUS_CENTER: [number, number] = [15.1700, 74.0130];
+// Canteen marker sits near the academic block cluster (Upahar Ghar / Nescafe
+// are co-located with the departments). Adjust if actual canteen coords differ.
+const CANTEEN_POS: [number, number] = [15.1690189, 74.0117258]; // Gyan Mandir vicinity
+const HOSTEL_POS: [number, number] = [15.1710367, 74.0147882]; // Talpona Hostel
 
 interface LiveMapProps {
   pilotLat?: number;
@@ -32,7 +34,7 @@ export default function LiveMap({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = L.map(containerRef.current).setView(CAMPUS_CENTER, 16);
+    const map = L.map(containerRef.current).setView(CAMPUS_CENTER, 17);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap contributors",
