@@ -1,0 +1,17 @@
+{
+    "production": {
+        "app_function": "main.handler",
+        "aws_region": "ap-south-1",
+        "project_name": "campusconnect-api",
+        "runtime": "python3.11",
+        "memory_size": 256,
+        "timeout_seconds": 30,
+        "keep_warm": false,
+        "environment_variables": {
+            "SUPABASE_URL": "",
+            "SUPABASE_SERVICE_KEY": "",
+            "JWT_SECRET": "",
+            "RESEND_API_KEY": ""
+        }
+    }
+}

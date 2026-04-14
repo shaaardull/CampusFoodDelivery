@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  # ============================================================
+  # Backend REST API (FastAPI)
+  # ============================================================
+  backend-rest:
+    build:
+      context: ./backend-rest
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend-rest/.env
+    depends_on:
+      - redis
+
+  # ============================================================
+  # Backend WebSocket Server (FastAPI)
+  # ============================================================
+  backend-ws:
+    build:
+      context: ./backend-ws
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./backend-ws/.env
+    depends_on:
+      - redis
+
+  # ============================================================
+  # Redis (for WS pub/sub and caching)
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # ============================================================
+  # Frontend (Next.js)
+  # ============================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env.local
+    depends_on:
+      - backend-rest
+      - backend-ws
+
+volumes:
+  redis_data:
