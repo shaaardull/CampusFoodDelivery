@@ -120,7 +120,6 @@ async def accept_order(order_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Order not found")
 
     order = check.data[0]
-    print(f"[ACCEPT DEBUG] order_id={order_id} status={order['status']!r} pilot_uid={order['pilot_uid']!r} type={type(order['pilot_uid'])}")
 
     if order["status"] != "open" or order.get("pilot_uid") not in (None, "", "null"):
         raise HTTPException(
@@ -128,17 +127,17 @@ async def accept_order(order_id: str, user: dict = Depends(get_current_user)):
             detail=f"Cannot accept: status={order['status']}, pilot_uid={order['pilot_uid']}"
         )
 
-    result = (
-        db.table("orders")
-        .update({"pilot_uid": user["uid"], "status": "accepted", "accepted_at": _now()})
-        .eq("id", order_id)
-        .execute()
-    )
+    # Update the order
+    db.table("orders").update(
+        {"pilot_uid": user["uid"], "status": "accepted", "accepted_at": _now()}
+    ).eq("id", order_id).execute()
 
-    if not result.data:
-        raise HTTPException(status_code=409, detail="Update failed")
+    # Re-fetch to confirm and return updated order
+    updated = db.table("orders").select("*").eq("id", order_id).execute()
+    if not updated.data or updated.data[0]["status"] != "accepted":
+        raise HTTPException(status_code=500, detail="Failed to accept order")
 
-    return {"order": result.data[0]}
+    return {"order": updated.data[0]}
 
 
 @router.post("/{order_id}/status")
@@ -166,8 +165,9 @@ async def advance_status(order_id: str, user: dict = Depends(get_current_user)):
     if next_status == "purchased":
         update_data["purchased_at"] = _now()
 
-    result = db.table("orders").update(update_data).eq("id", order_id).execute()
-    return {"order": result.data[0]}
+    db.table("orders").update(update_data).eq("id", order_id).execute()
+    updated = db.table("orders").select("*").eq("id", order_id).execute()
+    return {"order": updated.data[0]}
 
 
 @router.post("/{order_id}/complete")
@@ -185,12 +185,7 @@ async def complete_order(order_id: str, otp: str, user: dict = Depends(get_curre
     if order["handover_otp"] != otp:
         raise HTTPException(status_code=400, detail="Invalid OTP")
 
-    result = (
-        db.table("orders")
-        .update({"status": "completed", "completed_at": _now()})
-        .eq("id", order_id)
-        .execute()
-    )
+    db.table("orders").update({"status": "completed", "completed_at": _now()}).eq("id", order_id).execute()
 
     # Update pilot stats
     try:
@@ -199,7 +194,8 @@ async def complete_order(order_id: str, otp: str, user: dict = Depends(get_curre
     except Exception:
         pass  # Stats update is best-effort
 
-    return {"order": result.data[0]}
+    updated = db.table("orders").select("*").eq("id", order_id).execute()
+    return {"order": updated.data[0]}
 
 
 @router.post("/{order_id}/cancel")
@@ -215,13 +211,12 @@ async def cancel_order(order_id: str, reason: Optional[str] = None, user: dict =
     if order["status"] in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="Order already finalized")
 
-    result = (
-        db.table("orders")
-        .update({"status": "cancelled", "cancelled_at": _now(), "cancellation_reason": reason})
-        .eq("id", order_id)
-        .execute()
-    )
-    return {"order": result.data[0]}
+    db.table("orders").update(
+        {"status": "cancelled", "cancelled_at": _now(), "cancellation_reason": reason}
+    ).eq("id", order_id).execute()
+
+    updated = db.table("orders").select("*").eq("id", order_id).execute()
+    return {"order": updated.data[0]}
 
 
 @router.post("/{order_id}/rate")
