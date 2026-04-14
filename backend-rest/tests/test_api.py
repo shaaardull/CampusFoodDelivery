@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 # Set env vars before importing app
 os.environ.update({
+    "DEV_MODE": "false",  # Tests run with auth enforced
     "SUPABASE_URL": "https://test.supabase.co",
     "SUPABASE_SERVICE_KEY": "test-key",
     "JWT_SECRET": "test-jwt-secret-32-chars-long-xx",
