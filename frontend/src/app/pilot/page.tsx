@@ -40,10 +40,13 @@ export default function PilotPage() {
     role: "pilot",
   });
 
-  // Broadcast GPS location when delivering
+  // Broadcast GPS location whenever the pilot has an active, in-progress order.
+  // Broadcasts from acceptance onwards so the requester can see the pilot's
+  // position on the map from the moment someone picks up the order.
   usePilotLocationBroadcast(
     send,
-    !!activeOrder && ["in_transit"].includes(activeOrder.status)
+    !!activeOrder &&
+      ["accepted", "purchased", "in_transit", "arrived"].includes(activeOrder.status)
   );
 
   const orders = data?.orders || [];

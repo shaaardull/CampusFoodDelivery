@@ -182,6 +182,24 @@ export async function getLeaderboard(limit = 20) {
 }
 
 // ============================================================
+// Live location (WS server REST endpoint)
+// ============================================================
+const WS_HTTP =
+  (process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8001")
+    .replace(/^ws:/, "http:")
+    .replace(/^wss:/, "https:");
+
+export async function getPilotLocation(orderId: string) {
+  const res = await fetch(`${WS_HTTP}/location/${orderId}`);
+  if (!res.ok) return { lat: null, lng: null, ts: null };
+  return res.json() as Promise<{
+    lat: number | null;
+    lng: number | null;
+    ts: number | null;
+  }>;
+}
+
+// ============================================================
 // Push
 // ============================================================
 export async function subscribePush(data: {

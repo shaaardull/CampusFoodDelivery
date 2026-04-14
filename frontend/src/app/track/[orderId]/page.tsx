@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import dynamic from "next/dynamic";
-import { getOrder, cancelOrder } from "@/lib/api";
+import { getOrder, cancelOrder, getPilotLocation } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useOrderWs } from "@/hooks/useOrderWs";
 import { useToastStore } from "@/hooks/useToast";
@@ -56,6 +56,27 @@ export default function TrackOrderPage() {
     () => getOrder(orderId),
     { refreshInterval: 15000 }
   );
+
+  // Seed the map with the last known pilot location from the WS server's Redis
+  // cache, so the marker shows even if we join after the pilot last broadcast.
+  useEffect(() => {
+    if (!orderId) return;
+    let cancelled = false;
+    getPilotLocation(orderId)
+      .then((loc) => {
+        if (cancelled) return;
+        if (typeof loc.lat === "number" && typeof loc.lng === "number") {
+          setPilotLat(loc.lat);
+          setPilotLng(loc.lng);
+        }
+      })
+      .catch(() => {
+        // WS server down or no cached location — map will just have no pilot pin
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
 
   const onWsMessage = useCallback(
     (msg: WsMessage) => {
@@ -171,10 +192,16 @@ export default function TrackOrderPage() {
         {STATUS_LABEL[order.status] || order.status}
       </div>
 
-      {/* Map (show when pilot is en route) */}
-      {["in_transit", "arrived"].includes(order.status) && (
+      {/* Map (show from acceptance onwards so the requester can watch the pilot) */}
+      {["accepted", "purchased", "in_transit", "arrived"].includes(order.status) && (
         <div className="mb-4">
           <LiveMap pilotLat={pilotLat} pilotLng={pilotLng} />
+          {pilotLat === undefined && (
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              Waiting for pilot&apos;s location&hellip; (they may not have
+              granted GPS permission yet)
+            </p>
+          )}
         </div>
       )}
 
