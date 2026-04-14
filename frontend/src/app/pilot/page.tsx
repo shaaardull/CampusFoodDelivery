@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import useSWR, { mutate } from "swr";
 import { getOpenOrders, acceptOrder, advanceStatus, completeOrder } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -8,7 +8,7 @@ import { useToastStore } from "@/hooks/useToast";
 import { useOrderWs, usePilotLocationBroadcast } from "@/hooks/useOrderWs";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Spinner, SkeletonCard } from "@/components/shared/Loaders";
-import type { Order, OrderStatus } from "@/types";
+import type { Order, OrderStatus, WsMessage } from "@/types";
 
 const STATUS_LABELS: Record<string, string> = {
   accepted: "Mark as Purchased",
@@ -23,6 +23,23 @@ export default function PilotPage() {
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [otpInput, setOtpInput] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<
+    { text: string; role: string; timestamp: number }[]
+  >([]);
+  const [chatInput, setChatInput] = useState("");
+
+  const onWsMessage = useCallback((msg: WsMessage) => {
+    if (msg.type === "chat") {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          text: (msg as { text: string }).text,
+          role: msg.role,
+          timestamp: msg.timestamp,
+        },
+      ]);
+    }
+  }, []);
 
   // Fetch open orders when in pilot mode
   const { data, isLoading } = useSWR(
@@ -38,7 +55,18 @@ export default function PilotPage() {
   const { send, connected } = useOrderWs({
     orderId: activeOrder?.id || "none",
     role: "pilot",
+    onMessage: onWsMessage,
   });
+
+  const handleSendChat = () => {
+    if (!chatInput.trim()) return;
+    send({ type: "chat", text: chatInput });
+    setChatMessages((prev) => [
+      ...prev,
+      { text: chatInput, role: "pilot", timestamp: Date.now() / 1000 },
+    ]);
+    setChatInput("");
+  };
 
   // Broadcast GPS location whenever the pilot has an active, in-progress order.
   // Broadcasts from acceptance onwards so the requester can see the pilot's
@@ -62,6 +90,7 @@ export default function PilotPage() {
     try {
       const res = await acceptOrder(orderId);
       setActiveOrder(res.order);
+      setChatMessages([]); // fresh chat per mission
       addToast("Mission accepted! Head to the canteen.", "success");
       mutate("open-orders");
     } catch (err) {
@@ -98,6 +127,7 @@ export default function PilotPage() {
       );
       setActiveOrder(null);
       setOtpInput("");
+      setChatMessages([]);
     } catch (err) {
       addToast(err instanceof Error ? err.message : "Invalid OTP", "error");
     } finally {
@@ -210,6 +240,48 @@ export default function PilotPage() {
               </button>
             </div>
           )}
+
+          {/* Chat with Requester */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <h3 className="font-medium text-sm mb-2">Chat with Requester</h3>
+            <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
+              {chatMessages.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">
+                  No messages yet
+                </p>
+              ) : (
+                chatMessages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`text-sm px-3 py-1.5 rounded-lg max-w-[80%] ${
+                      msg.role === "pilot"
+                        ? "bg-brand-50 text-brand-800 ml-auto"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
+                placeholder="Type a message..."
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+              <button
+                onClick={handleSendChat}
+                disabled={!chatInput.trim() || !connected}
+                className="px-4 py-2 bg-brand-500 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                Send
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
