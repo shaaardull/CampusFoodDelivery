@@ -109,13 +109,13 @@ async def get_order(order_id: str, user: dict = Depends(get_current_user)):
 async def accept_order(order_id: str, user: dict = Depends(get_current_user)):
     db = get_supabase()
 
-    # Race-condition safe: only update if still open
+    # Race-condition safe: only update if still open and no pilot assigned
     result = (
         db.table("orders")
         .update({"pilot_uid": user["uid"], "status": "accepted", "accepted_at": "now()"})
         .eq("id", order_id)
         .eq("status", "open")
-        .is_("pilot_uid", "null")
+        .filter("pilot_uid", "is", "null")
         .execute()
     )
 

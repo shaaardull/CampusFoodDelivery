@@ -209,7 +209,7 @@ class TestOrders:
         mock_client = MagicMock()
         mock_db.return_value = mock_client
         # Simulate already-accepted (no rows returned)
-        mock_client.table.return_value.update.return_value.eq.return_value.eq.return_value.is_.return_value.execute.return_value = MagicMock(
+        mock_client.table.return_value.update.return_value.eq.return_value.eq.return_value.filter.return_value.execute.return_value = MagicMock(
             data=[]
         )
 
