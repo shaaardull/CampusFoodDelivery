@@ -175,8 +175,8 @@ INSERT INTO drop_locations (name, description, lat, lng) VALUES
     ('Terekhol Hostel',    'Girls Hostel - Terekhol Block near lift',         15.1697763, 74.0121135),
     ('Mechanical Dept',    'Mechanical Engineering Department entrance',       15.1697079, 74.0127932),
     ('Civil Dept',         'Civil Engineering Department entrance',            15.1695920, 74.0134207),
-    ('ECE Dept',           'Electronics & Communication Department entrance',  15.1686770, 74.0127808),
-    ('CSE Dept',           'Computer Science Department entrance',             15.1686770, 74.0127808),
+    ('ECE Dept',           'Electronics & Communication Department entrance',  15.168814,  74.012959),
+    ('CSE Dept',           'Computer Science Department entrance',             15.168811,  74.013550),
     ('Library Block',      'Central Library main entrance',                    15.1693565, 74.0122595),
     ('Gyan Mandir',        'Gyan Mandir academic block',                       15.1690189, 74.0117258);
 
