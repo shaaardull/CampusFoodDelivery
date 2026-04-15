@@ -1,8 +1,11 @@
--- Fix CSE Dept / ECE Dept drop-location coordinates.
+-- Fix drop-location coordinates (CSE / ECE / Library).
 --
 -- The prior seed/migration put CSE and ECE at the exact same lat/lng
 -- (15.168677, 74.0127808), which made the CSE marker land on ECE on the
--- tracking map. These are the correct on-campus coords.
+-- tracking map. The Library Block coord was also slightly off. These are
+-- the correct on-campus coords.
+--
+-- Idempotent: safe to re-run if partially applied.
 
 BEGIN;
 
@@ -17,5 +20,11 @@ SET lat = 15.168811,
     lng = 74.013550,
     description = 'Computer Science Department entrance'
 WHERE LOWER(name) IN ('cse dept', 'cse department');
+
+UPDATE drop_locations
+SET lat = 15.169233,
+    lng = 74.012713,
+    description = 'Central Library main entrance'
+WHERE LOWER(name) IN ('library', 'library block');
 
 COMMIT;

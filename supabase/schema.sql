@@ -177,7 +177,7 @@ INSERT INTO drop_locations (name, description, lat, lng) VALUES
     ('Civil Dept',         'Civil Engineering Department entrance',            15.1695920, 74.0134207),
     ('ECE Dept',           'Electronics & Communication Department entrance',  15.168814,  74.012959),
     ('CSE Dept',           'Computer Science Department entrance',             15.168811,  74.013550),
-    ('Library Block',      'Central Library main entrance',                    15.1693565, 74.0122595),
+    ('Library Block',      'Central Library main entrance',                    15.169233,  74.012713),
     ('Gyan Mandir',        'Gyan Mandir academic block',                       15.1690189, 74.0117258);
 
 -- ============================================================
