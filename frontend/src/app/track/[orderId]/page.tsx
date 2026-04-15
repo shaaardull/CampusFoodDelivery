@@ -4,7 +4,12 @@ import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import dynamic from "next/dynamic";
-import { getOrder, cancelOrder, getPilotLocation } from "@/lib/api";
+import {
+  getOrder,
+  cancelOrder,
+  getPilotLocation,
+  getDropLocations,
+} from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useOrderWs } from "@/hooks/useOrderWs";
 import { useToastStore } from "@/hooks/useToast";
@@ -57,6 +62,11 @@ export default function TrackOrderPage() {
     { refreshInterval: 15000 }
   );
 
+  // Fetch drop locations so we can plot the selected drop on the map.
+  // The order only stores the drop name/id, not lat/lng — we resolve coords
+  // client-side by matching drop_location_id against the locations list.
+  const { data: locData } = useSWR("locations", getDropLocations);
+
   // Seed the map with the last known pilot location from the WS server's Redis
   // cache, so the marker shows even if we join after the pilot last broadcast.
   useEffect(() => {
@@ -103,6 +113,10 @@ export default function TrackOrderPage() {
 
   const order = data?.order;
   const isRequester = order?.requester_uid === user?.uid;
+
+  const dropLocation = locData?.locations.find(
+    (l) => l.id === order?.drop_location_id
+  );
 
   const handleSendChat = () => {
     if (!chatInput.trim()) return;
@@ -195,7 +209,13 @@ export default function TrackOrderPage() {
       {/* Map (show from acceptance onwards so the requester can watch the pilot) */}
       {["accepted", "purchased", "in_transit", "arrived"].includes(order.status) && (
         <div className="mb-4">
-          <LiveMap pilotLat={pilotLat} pilotLng={pilotLng} />
+          <LiveMap
+            pilotLat={pilotLat}
+            pilotLng={pilotLng}
+            dropLat={dropLocation?.lat}
+            dropLng={dropLocation?.lng}
+            dropName={order.drop_location_name}
+          />
           {pilotLat === undefined && (
             <p className="text-xs text-gray-400 mt-2 text-center">
               Waiting for pilot&apos;s location&hellip; (they may not have
