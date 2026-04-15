@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import dynamic from "next/dynamic";
-import { getOrder, cancelOrder } from "@/lib/api";
+import {
+  getOrder,
+  cancelOrder,
+  getPilotLocation,
+  getDropLocations,
+} from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useOrderWs } from "@/hooks/useOrderWs";
 import { useToastStore } from "@/hooks/useToast";
@@ -57,6 +62,32 @@ export default function TrackOrderPage() {
     { refreshInterval: 15000 }
   );
 
+  // Fetch drop locations so we can plot the selected drop on the map.
+  // The order only stores the drop name/id, not lat/lng — we resolve coords
+  // client-side by matching drop_location_id against the locations list.
+  const { data: locData } = useSWR("locations", getDropLocations);
+
+  // Seed the map with the last known pilot location from the WS server's Redis
+  // cache, so the marker shows even if we join after the pilot last broadcast.
+  useEffect(() => {
+    if (!orderId) return;
+    let cancelled = false;
+    getPilotLocation(orderId)
+      .then((loc) => {
+        if (cancelled) return;
+        if (typeof loc.lat === "number" && typeof loc.lng === "number") {
+          setPilotLat(loc.lat);
+          setPilotLng(loc.lng);
+        }
+      })
+      .catch(() => {
+        // WS server down or no cached location — map will just have no pilot pin
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
+
   const onWsMessage = useCallback(
     (msg: WsMessage) => {
       if (msg.type === "location") {
@@ -82,6 +113,10 @@ export default function TrackOrderPage() {
 
   const order = data?.order;
   const isRequester = order?.requester_uid === user?.uid;
+
+  const dropLocation = locData?.locations.find(
+    (l) => l.id === order?.drop_location_id
+  );
 
   const handleSendChat = () => {
     if (!chatInput.trim()) return;
@@ -171,10 +206,23 @@ export default function TrackOrderPage() {
         {STATUS_LABEL[order.status] || order.status}
       </div>
 
-      {/* Map (show when pilot is en route) */}
-      {["in_transit", "arrived"].includes(order.status) && (
+      {/* Map (show from acceptance onwards so the requester can watch the pilot) */}
+      {["accepted", "purchased", "in_transit", "arrived"].includes(order.status) && (
         <div className="mb-4">
-          <LiveMap pilotLat={pilotLat} pilotLng={pilotLng} />
+          <LiveMap
+            pilotLat={pilotLat}
+            pilotLng={pilotLng}
+            dropLat={dropLocation?.lat}
+            dropLng={dropLocation?.lng}
+            dropName={order.drop_location_name}
+            source={order.source}
+          />
+          {pilotLat === undefined && (
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              Waiting for pilot&apos;s location&hellip; (they may not have
+              granted GPS permission yet)
+            </p>
+          )}
         </div>
       )}
 
@@ -204,9 +252,12 @@ export default function TrackOrderPage() {
         )}
       </div>
 
-      {/* OTP (visible only to requester, after acceptance) */}
-      {isRequester &&
-        order.handover_otp &&
+      {/* Handover OTP.
+          The backend strips `handover_otp` from the response when the current
+          user is the pilot (see backend-rest/routers/orders.py get_order), so
+          the mere presence of `order.handover_otp` means the viewer is allowed
+          to see it. No frontend-side identity check needed. */}
+      {order.handover_otp &&
         ["accepted", "purchased", "in_transit", "arrived"].includes(order.status) && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4 text-center">
             <p className="text-sm text-yellow-700 mb-1">

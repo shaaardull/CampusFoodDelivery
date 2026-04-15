@@ -157,49 +157,28 @@ CREATE INDEX idx_audit_created ON audit_log(created_at DESC);
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ratings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
-
--- Users can read their own data; pilots can be looked up publicly
-CREATE POLICY "Users can read own data" ON users
-    FOR SELECT USING (true);
-
-CREATE POLICY "Users can update own data" ON users
-    FOR UPDATE USING (auth.uid() = uid);
-
--- Orders: requesters and pilots can see their orders; open orders visible to all
-CREATE POLICY "Open orders visible to all" ON orders
-    FOR SELECT USING (status = 'open' OR requester_uid = auth.uid() OR pilot_uid = auth.uid());
-
-CREATE POLICY "Authenticated users can insert orders" ON orders
-    FOR INSERT WITH CHECK (auth.uid() = requester_uid);
-
-CREATE POLICY "Involved users can update orders" ON orders
-    FOR UPDATE USING (requester_uid = auth.uid() OR pilot_uid = auth.uid());
-
--- Ratings: public read, authenticated write
-CREATE POLICY "Ratings are public" ON ratings
-    FOR SELECT USING (true);
-
-CREATE POLICY "Authenticated users can rate" ON ratings
-    FOR INSERT WITH CHECK (auth.uid() = rater_uid);
-
--- Push subscriptions: users manage their own
-CREATE POLICY "Users manage own push subs" ON push_subscriptions
-    FOR ALL USING (auth.uid() = user_uid);
+-- NOTE: All table access is mediated by the FastAPI backend using the Supabase
+-- service role key. Authorization (who can read/update which order, etc.) is
+-- enforced in the API layer (see backend-rest/routers/*). We therefore disable
+-- RLS on tables the backend mutates, because PostgREST/supabase-py policies
+-- based on auth.uid() don't apply in server-to-server calls.
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE ratings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions DISABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- SEED DATA: Drop Locations
+-- SEED DATA: Drop Locations (NIT Goa campus coordinates)
 -- ============================================================
 INSERT INTO drop_locations (name, description, lat, lng) VALUES
-    ('Talpona Lift', 'Boys Hostel - Talpona Block near lift', 15.1735, 74.0445),
-    ('Terekhol Lift', 'Girls Hostel - Terekhol Block near lift', 15.1738, 74.0448),
-    ('CSE Department', 'Computer Science Department entrance', 15.1740, 74.0435),
-    ('ECE Department', 'Electronics Department entrance', 15.1742, 74.0437),
-    ('Mechanical Department', 'Mechanical Department entrance', 15.1744, 74.0439),
-    ('Library', 'Central Library main entrance', 15.1741, 74.0441);
+    ('Talpona Hostel',     'Boys Hostel - Talpona Block near lift',           15.171168,  74.015692),
+    ('Terekhol Hostel',    'Girls Hostel - Terekhol Block near lift',         15.170016,  74.012100),
+    ('Mechanical Dept',    'Mechanical Engineering Department entrance',       15.169770,  74.014119),
+    ('Civil Dept',         'Civil Engineering Department entrance',            15.1695920, 74.0134207),
+    ('ECE Dept',           'Electronics & Communication Department entrance',  15.168814,  74.012959),
+    ('CSE Dept',           'Computer Science Department entrance',             15.168811,  74.013550),
+    ('Library Block',      'Central Library main entrance',                    15.169233,  74.012713),
+    ('Gyan Mandir',        'Gyan Mandir academic block',                       15.1690189, 74.0117258);
 
 -- ============================================================
 -- SEED DATA: Menu Items (Upahar Ghar)

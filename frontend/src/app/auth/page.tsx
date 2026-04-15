@@ -23,15 +23,21 @@ export default function AuthPage() {
   const [upi, setUpi] = useState("");
   const [loading, setLoading] = useState(false);
   const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleSendOtp = async () => {
     if (!email.trim()) return;
     setLoading(true);
     try {
       const res = await sendOtp(email);
-      if (res.dev_otp) setDevOtp(res.dev_otp);
+      setDevOtp(res.dev_otp ?? null);
+      setEmailError(res.email_error ?? null);
       setStep("otp");
-      addToast("OTP sent to your email", "success");
+      if (res.email_sent) {
+        addToast("OTP sent to your email", "success");
+      } else {
+        addToast("Email delivery unavailable — use the code shown below", "info");
+      }
     } catch (err) {
       addToast(err instanceof Error ? err.message : "Failed to send OTP", "error");
     } finally {
@@ -121,8 +127,15 @@ export default function AuthPage() {
               Enter the 4-digit OTP sent to <strong>{email}</strong>
             </p>
             {devOtp && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-sm text-yellow-800 text-center">
-                Dev mode OTP: <strong>{devOtp}</strong>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-sm text-yellow-800 text-center space-y-1">
+                <div>
+                  Dev OTP: <strong>{devOtp}</strong>
+                </div>
+                {emailError && (
+                  <div className="text-xs text-yellow-700">
+                    Email not sent: {emailError}
+                  </div>
+                )}
               </div>
             )}
             <input

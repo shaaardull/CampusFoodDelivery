@@ -18,6 +18,7 @@ frontend/.env.local
 out/
 dist/
 *.egg-info/
+*.tsbuildinfo
 
 # IDE
 .vscode/

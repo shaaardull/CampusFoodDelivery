@@ -68,6 +68,7 @@ export function useOrderWs({ orderId, role, onMessage }: UseOrderWsOptions) {
 
 /**
  * Hook for pilot to broadcast GPS location every N seconds.
+ * Fires once immediately on activation, then on interval.
  */
 export function usePilotLocationBroadcast(
   send: (msg: Record<string, unknown>) => void,
@@ -75,9 +76,13 @@ export function usePilotLocationBroadcast(
   intervalMs = 10000
 ) {
   useEffect(() => {
-    if (!active || !navigator.geolocation) return;
+    if (!active) return;
+    if (!navigator.geolocation) {
+      console.warn("[pilot] navigator.geolocation unavailable in this browser");
+      return;
+    }
 
-    const id = setInterval(() => {
+    const broadcast = () => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           send({
@@ -86,11 +91,15 @@ export function usePilotLocationBroadcast(
             lng: pos.coords.longitude,
           });
         },
-        () => {}, // Ignore errors silently
-        { enableHighAccuracy: true, timeout: 5000 }
+        (err) => {
+          console.warn("[pilot] geolocation error:", err.code, err.message);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
-    }, intervalMs);
+    };
 
+    broadcast(); // fire once immediately so the requester gets a marker fast
+    const id = setInterval(broadcast, intervalMs);
     return () => clearInterval(id);
   }, [send, active, intervalMs]);
 }

@@ -40,7 +40,12 @@ async function request<T>(
 // Auth
 // ============================================================
 export async function sendOtp(email: string) {
-  return request<{ message: string; dev_otp?: string }>("/auth/send-otp", {
+  return request<{
+    message: string;
+    email_sent: boolean;
+    email_error: string | null;
+    dev_otp: string | null;
+  }>("/auth/send-otp", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
@@ -179,6 +184,24 @@ export async function getLeaderboard(limit = 20) {
   return request<{ leaderboard: LeaderboardEntry[] }>(
     `/leaderboard/?limit=${limit}`
   );
+}
+
+// ============================================================
+// Live location (WS server REST endpoint)
+// ============================================================
+const WS_HTTP =
+  (process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8001")
+    .replace(/^ws:/, "http:")
+    .replace(/^wss:/, "https:");
+
+export async function getPilotLocation(orderId: string) {
+  const res = await fetch(`${WS_HTTP}/location/${orderId}`);
+  if (!res.ok) return { lat: null, lng: null, ts: null };
+  return res.json() as Promise<{
+    lat: number | null;
+    lng: number | null;
+    ts: number | null;
+  }>;
 }
 
 // ============================================================

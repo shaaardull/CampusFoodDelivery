@@ -39,21 +39,43 @@ async def send_otp(req: SendOtpRequest):
     otp = f"{random.randint(1000, 9999)}"
     _otp_store[req.email] = {"otp": otp, "expires": time.time() + settings.otp_ttl_seconds}
 
-    if settings.resend_api_key:
-        resend.api_key = settings.resend_api_key
-        resend.Emails.send(
-            {
-                "from": "CampusConnect <noreply@campusconnect.dev>",
-                "to": [req.email],
-                "subject": f"Your CampusConnect OTP: {otp}",
-                "html": f"<p>Your one-time code is <strong>{otp}</strong>. It expires in 5 minutes.</p>",
-            }
-        )
-    else:
-        # Dev mode: print OTP to console
-        print(f"[DEV] OTP for {req.email}: {otp}")
+    # Always log to the server console so a developer can recover the OTP
+    # if email delivery silently fails.
+    print(f"[OTP] {req.email}: {otp}")
 
-    return {"message": "OTP sent", "dev_otp": otp if not settings.resend_api_key else None}
+    email_sent = False
+    email_error: Optional[str] = None
+
+    if settings.resend_api_key:
+        try:
+            resend.api_key = settings.resend_api_key
+            resend.Emails.send(
+                {
+                    "from": settings.resend_from,
+                    "to": [req.email],
+                    "subject": f"Your CampusConnect OTP: {otp}",
+                    "html": (
+                        f"<p>Your one-time code is <strong>{otp}</strong>. "
+                        f"It expires in 5 minutes.</p>"
+                    ),
+                }
+            )
+            email_sent = True
+        except Exception as e:  # noqa: BLE001 - Resend SDK raises bare Exception
+            # Don't 500 the request: we still want the user to be able to log
+            # in via the dev_otp fallback while Resend / DNS is being fixed.
+            email_error = str(e)
+            print(f"[OTP] Resend failed for {req.email}: {email_error}")
+
+    # Expose the OTP in the response when email delivery didn't happen, so
+    # local development works without any SMTP setup. In production with a
+    # verified Resend domain, email_sent will be True and dev_otp is hidden.
+    return {
+        "message": "OTP sent" if email_sent else "OTP generated (email not delivered)",
+        "email_sent": email_sent,
+        "email_error": email_error,
+        "dev_otp": None if email_sent else otp,
+    }
 
 
 def _verify_otp(email: str, otp: str) -> bool:
