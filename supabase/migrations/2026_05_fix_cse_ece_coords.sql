@@ -1,13 +1,19 @@
--- Fix drop-location coordinates (CSE / ECE / Library / Talpona / Terekhol).
+-- Fix drop-location coordinates (Mechanical / CSE / ECE / Library / Talpona / Terekhol).
 --
 -- The prior seed/migration put CSE and ECE at the exact same lat/lng
 -- (15.168677, 74.0127808), which made the CSE marker land on ECE on the
--- tracking map. The Library / Talpona / Terekhol coords were also off.
--- These are the correct on-campus coords.
+-- tracking map. The Library / Mechanical / Talpona / Terekhol coords were
+-- also off. These are the correct on-campus coords.
 --
 -- Idempotent: safe to re-run if partially applied.
 
 BEGIN;
+
+UPDATE drop_locations
+SET lat = 15.169770,
+    lng = 74.014119,
+    description = 'Mechanical Engineering Department entrance'
+WHERE LOWER(name) IN ('mechanical dept', 'mechanical department');
 
 UPDATE drop_locations
 SET lat = 15.168814,

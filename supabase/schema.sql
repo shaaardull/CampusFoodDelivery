@@ -173,7 +173,7 @@ ALTER TABLE push_subscriptions DISABLE ROW LEVEL SECURITY;
 INSERT INTO drop_locations (name, description, lat, lng) VALUES
     ('Talpona Hostel',     'Boys Hostel - Talpona Block near lift',           15.171168,  74.015692),
     ('Terekhol Hostel',    'Girls Hostel - Terekhol Block near lift',         15.170016,  74.012100),
-    ('Mechanical Dept',    'Mechanical Engineering Department entrance',       15.1697079, 74.0127932),
+    ('Mechanical Dept',    'Mechanical Engineering Department entrance',       15.169770,  74.014119),
     ('Civil Dept',         'Civil Engineering Department entrance',            15.1695920, 74.0134207),
     ('ECE Dept',           'Electronics & Communication Department entrance',  15.168814,  74.012959),
     ('CSE Dept',           'Computer Science Department entrance',             15.168811,  74.013550),
