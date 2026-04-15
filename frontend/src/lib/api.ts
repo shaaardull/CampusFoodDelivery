@@ -40,7 +40,12 @@ async function request<T>(
 // Auth
 // ============================================================
 export async function sendOtp(email: string) {
-  return request<{ message: string; dev_otp?: string }>("/auth/send-otp", {
+  return request<{
+    message: string;
+    email_sent: boolean;
+    email_error: string | null;
+    dev_otp: string | null;
+  }>("/auth/send-otp", {
     method: "POST",
     body: JSON.stringify({ email }),
   });

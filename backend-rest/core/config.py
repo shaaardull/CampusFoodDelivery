@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 hours
     resend_api_key: str = ""
+    # Resend sender address. Defaults to their shared sandbox sender which
+    # works for any account without domain verification, but can only send to
+    # the email the Resend account was created with. Override with your own
+    # verified domain to email anyone.
+    resend_from: str = "CampusConnect <onboarding@resend.dev>"
     otp_ttl_seconds: int = 300  # 5 minutes
     owm_api_key: str = ""  # OpenWeatherMap, optional
     vapid_private_key: str = ""
