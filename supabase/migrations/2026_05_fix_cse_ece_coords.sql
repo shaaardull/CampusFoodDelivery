@@ -1,9 +1,9 @@
--- Fix drop-location coordinates (CSE / ECE / Library).
+-- Fix drop-location coordinates (CSE / ECE / Library / Talpona / Terekhol).
 --
 -- The prior seed/migration put CSE and ECE at the exact same lat/lng
 -- (15.168677, 74.0127808), which made the CSE marker land on ECE on the
--- tracking map. The Library Block coord was also slightly off. These are
--- the correct on-campus coords.
+-- tracking map. The Library / Talpona / Terekhol coords were also off.
+-- These are the correct on-campus coords.
 --
 -- Idempotent: safe to re-run if partially applied.
 
@@ -26,5 +26,17 @@ SET lat = 15.169233,
     lng = 74.012713,
     description = 'Central Library main entrance'
 WHERE LOWER(name) IN ('library', 'library block');
+
+UPDATE drop_locations
+SET lat = 15.171168,
+    lng = 74.015692,
+    description = 'Boys Hostel - Talpona Block near lift'
+WHERE LOWER(name) IN ('talpona hostel', 'talpona lift');
+
+UPDATE drop_locations
+SET lat = 15.170016,
+    lng = 74.012100,
+    description = 'Girls Hostel - Terekhol Block near lift'
+WHERE LOWER(name) IN ('terekhol hostel', 'terekhol lift');
 
 COMMIT;

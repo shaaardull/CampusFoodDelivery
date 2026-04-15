@@ -7,9 +7,8 @@ import "leaflet/dist/leaflet.css";
 // NIT Goa campus center — used only as the initial pan target before any
 // markers have been placed. Once markers are added we fitBounds to them.
 const CAMPUS_CENTER: [number, number] = [15.17, 74.013];
-// Pickup points on the NIT Goa campus. Upahar Ghar sits near Gyan Mandir
-// in the academic block; Nescafe sits further east near the hostel side.
-const UPAHAR_GHAR_POS: [number, number] = [15.1690189, 74.0117258];
+// Pickup points on the NIT Goa campus.
+const UPAHAR_GHAR_POS: [number, number] = [15.170024, 74.013329];
 const NESCAFE_POS: [number, number] = [15.170288, 74.013896];
 
 type Source = "upahar_ghar" | "nescafe";
