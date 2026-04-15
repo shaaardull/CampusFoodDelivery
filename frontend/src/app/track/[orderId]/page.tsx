@@ -215,6 +215,7 @@ export default function TrackOrderPage() {
             dropLat={dropLocation?.lat}
             dropLng={dropLocation?.lng}
             dropName={order.drop_location_name}
+            source={order.source}
           />
           {pilotLat === undefined && (
             <p className="text-xs text-gray-400 mt-2 text-center">
