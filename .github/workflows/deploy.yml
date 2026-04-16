@@ -55,7 +55,7 @@ jobs:
         run: zappa update production || zappa deploy production
 
   # ============================================================
-  # Deploy Frontend to Vercel
+  # Deploy Frontend to EC2 (Next.js standalone build)
   # ============================================================
   deploy-frontend:
     runs-on: ubuntu-latest
@@ -68,17 +68,46 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Deploy to Vercel
-        run: vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build standalone
         env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_WS_URL: ${{ secrets.NEXT_PUBLIC_WS_URL }}
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+        run: |
+          npm run build
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public 2>/dev/null || true
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.WS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.WS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy via rsync
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            .next/standalone/ ubuntu@${{ secrets.WS_HOST }}:/opt/campusconnect-frontend/
+
+      - name: Copy service file and restart
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            campusconnect-frontend.service \
+            ubuntu@${{ secrets.WS_HOST }}:/tmp/campusconnect-frontend.service
+          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.WS_HOST }} '
+            sudo cp /tmp/campusconnect-frontend.service /etc/systemd/system/ &&
+            sudo systemctl daemon-reload &&
+            sudo systemctl enable campusconnect-frontend &&
+            sudo systemctl restart campusconnect-frontend
+          '
 
   # ============================================================
-  # Deploy WebSocket Server to Lightsail / EC2
+  # Deploy WebSocket Server to EC2
   # ============================================================
   deploy-ws:
     runs-on: ubuntu-latest
@@ -108,4 +137,13 @@ jobs:
             source venv/bin/activate &&
             pip install -r requirements.txt --quiet &&
             sudo systemctl restart campusconnect-ws
+          '
+
+      - name: Reload nginx config
+        run: |
+          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.WS_HOST }} '
+            sudo cp /opt/campusconnect-ws/nginx.conf /etc/nginx/sites-available/campusconnect &&
+            sudo ln -sf /etc/nginx/sites-available/campusconnect /etc/nginx/sites-enabled/ &&
+            sudo nginx -t &&
+            sudo systemctl reload nginx
           '
