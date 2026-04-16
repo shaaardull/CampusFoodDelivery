@@ -1,0 +1,16 @@
+[Unit]
+Description=CampusConnect REST API (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/campusconnect-rest
+Environment="PATH=/opt/campusconnect-rest/venv/bin"
+EnvironmentFile=/opt/campusconnect-rest/.env
+ExecStart=/opt/campusconnect-rest/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

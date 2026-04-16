@@ -6,58 +6,39 @@ on:
 
 jobs:
   # ============================================================
-  # Deploy REST API to AWS Lambda via Zappa
+  # Deploy REST API to EC2
   # ============================================================
-  deploy-lambda:
+  deploy-rest:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend-rest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
 
-      - name: Create venv and install dependencies
+      - name: Setup SSH
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt zappa
+          mkdir -p ~/.ssh
+          echo "${{ secrets.WS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.WS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
-
-      - name: Inject production env vars
-        env:
-          _SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          _SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          _JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          _RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      - name: Deploy via rsync
         run: |
-          python3 << 'PYEOF'
-          import json, os
-          with open("zappa_settings.json") as f:
-              settings = json.load(f)
-          settings["production"]["environment_variables"] = {
-              "DEV_MODE": "false",
-              "SUPABASE_URL": os.environ["_SUPABASE_URL"],
-              "SUPABASE_SERVICE_KEY": os.environ["_SUPABASE_SERVICE_KEY"],
-              "JWT_SECRET": os.environ["_JWT_SECRET"],
-              "RESEND_API_KEY": os.environ["_RESEND_API_KEY"],
-          }
-          with open("zappa_settings.json", "w") as f:
-              json.dump(settings, f, indent=4)
-          PYEOF
+          rsync -avz --delete \
+            --exclude '.env' \
+            --exclude 'venv/' \
+            --exclude '__pycache__/' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            backend-rest/ ubuntu@${{ secrets.WS_HOST }}:/opt/campusconnect-rest/
 
-      - name: Deploy to Lambda
+      - name: Install dependencies and restart
         run: |
-          source venv/bin/activate
-          zappa update production || zappa deploy production
+          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.WS_HOST }} '
+            cd /opt/campusconnect-rest &&
+            source venv/bin/activate &&
+            pip install -r requirements.txt --quiet &&
+            sudo cp campusconnect-rest.service /etc/systemd/system/ &&
+            sudo systemctl daemon-reload &&
+            sudo systemctl restart campusconnect-rest
+          '
 
   # ============================================================
   # Deploy Frontend to EC2 (Next.js standalone build)
