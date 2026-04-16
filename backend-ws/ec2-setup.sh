@@ -1,6 +1,6 @@
 #!/bin/bash
-# EC2 setup script for CampusConnect WebSocket server
-# Run on a fresh Ubuntu 22.04+ t3.micro instance
+# Setup script for CampusConnect WebSocket server
+# Works on: AWS Lightsail ($3.50/mo), EC2 t4g.nano, or any Ubuntu 22.04+
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ sudo systemctl start redis-server
 sudo mkdir -p /opt/campusconnect-ws
 sudo chown $USER:$USER /opt/campusconnect-ws
 
-# Copy files (assumes you've scp'd them)
+# Copy files (assumes you've scp'd them or rsync'd via GitHub Actions)
 cd /opt/campusconnect-ws
 
 # Create virtual environment
@@ -28,8 +28,11 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Create .env
-cp .env.example .env
+# Create .env (only on first run — CI deploys preserve existing .env)
+if [ ! -f .env ]; then
+    cp .env.example .env
+    echo "Created .env from .env.example — edit REDIS_URL if needed"
+fi
 
 # Install systemd service
 sudo cp campusconnect-ws.service /etc/systemd/system/
@@ -44,8 +47,16 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl restart nginx
 
+echo ""
 echo "=== Setup complete! ==="
 echo "WS server running on port 8001"
 echo "Nginx proxying on port 80"
 echo ""
-echo "For SSL, run: sudo certbot --nginx -d your-domain.com"
+echo "=== Next: SSL (required for wss:// from HTTPS frontend) ==="
+echo ""
+echo "1. Go to https://www.duckdns.org — log in with GitHub"
+echo "2. Create a free subdomain (e.g. campusconnect-ws)"
+echo "3. Set the IP to this server's public IP"
+echo "4. Run: sudo certbot --nginx -d YOUR-SUBDOMAIN.duckdns.org"
+echo ""
+echo "Your WS URL will be: wss://YOUR-SUBDOMAIN.duckdns.org"

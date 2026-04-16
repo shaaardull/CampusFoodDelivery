@@ -29,6 +29,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
+      - name: Inject production env vars
+        env:
+          _SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          _SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          _JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          _RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os
+          with open("zappa_settings.json") as f:
+              settings = json.load(f)
+          settings["production"]["environment_variables"] = {
+              "DEV_MODE": "false",
+              "SUPABASE_URL": os.environ["_SUPABASE_URL"],
+              "SUPABASE_SERVICE_KEY": os.environ["_SUPABASE_SERVICE_KEY"],
+              "JWT_SECRET": os.environ["_JWT_SECRET"],
+              "RESEND_API_KEY": os.environ["_RESEND_API_KEY"],
+          }
+          with open("zappa_settings.json", "w") as f:
+              json.dump(settings, f, indent=4)
+          PYEOF
+
       - name: Deploy to Lambda
         run: zappa update production || zappa deploy production
 
@@ -54,3 +76,36 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # ============================================================
+  # Deploy WebSocket Server to Lightsail / EC2
+  # ============================================================
+  deploy-ws:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.WS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.WS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy via rsync
+        run: |
+          rsync -avz --delete \
+            --exclude '.env' \
+            --exclude 'venv/' \
+            --exclude '__pycache__/' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            backend-ws/ ubuntu@${{ secrets.WS_HOST }}:/opt/campusconnect-ws/
+
+      - name: Install dependencies and restart
+        run: |
+          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.WS_HOST }} '
+            cd /opt/campusconnect-ws &&
+            source venv/bin/activate &&
+            pip install -r requirements.txt --quiet &&
+            sudo systemctl restart campusconnect-ws
+          '
