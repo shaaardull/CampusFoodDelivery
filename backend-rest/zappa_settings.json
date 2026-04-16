@@ -7,6 +7,7 @@
         "memory_size": 256,
         "timeout_seconds": 30,
         "keep_warm": false,
+        "check_command_string": "curl https://{api_url}/health",
         "environment_variables": {
             "SUPABASE_URL": "",
             "SUPABASE_SERVICE_KEY": "",
